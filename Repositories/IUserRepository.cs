@@ -7,4 +7,5 @@ public interface IUserRepository
     List<Models.User> SearchByName(string keyword);
     void Add(Models.User user);
     bool Delete(int id);
+    
 }

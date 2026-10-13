@@ -39,8 +39,18 @@ public class UserController
             return;
         }
 
-        _repository.Add(new User { Name = name, Email = email, Age = age });
-        Console.WriteLine("ユーザーを登録しました。");
+        // ▼▼▼ ここから変更 ▼▼▼
+        try
+        {
+            _repository.Add(new User { Name = name, Email = email, Age = age });
+            Console.WriteLine("ユーザーを登録しました。");
+        }
+        catch (ArgumentException ex)
+        {
+            // HashSetで重複検知した例外をここでキャッチして表示する
+            Console.WriteLine($"エラー: {ex.Message}");
+        }
+        // ▲▲▲ ここまで変更 ▲▲▲
     }
 
     public void ShowAllUsers()
