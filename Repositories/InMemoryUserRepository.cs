@@ -4,41 +4,59 @@ namespace Day4UserConsole.Repositories;
 
 public class InMemoryUserRepository : IUserRepository
 {
-    // ① ユーザーデータを「IDをキーにしたDictionary」で管理
     private readonly Dictionary<int, User> _users = new();
-    
-    // ② 重複を許さないHashSetで「登録済みメールアドレス」を管理
     private readonly HashSet<string> _emails = new();
+    
+    // 部署のマスターデータ
+    private readonly List<Department> _departments = new()
+    {
+        new Department { Id = 1, Name = "営業部" },
+        new Department { Id = 2, Name = "開発部" },
+        new Department { Id = 3, Name = "総務部" }
+    };
 
     public InMemoryUserRepository()
     {
-        // 初期データをDictionaryとHashSetにセット
-        var user1 = new User { Id = 1, Name = "佐藤 太郎", Email = "sato@example.com", Age = 28 };
-        var user2 = new User { Id = 2, Name = "鈴木 一郎", Email = "suzuki@example.com", Age = 35 };
+        // 初期データ（テスト用に追加）
+        var user1 = new User { Id = 1, Name = "佐藤 太郎", Email = "sato@example.com", Age = 28, DepartmentId = 1 };
+        var user2 = new User { Id = 2, Name = "鈴木 一郎", Email = "suzuki@example.com", Age = 35, DepartmentId = 2 };
+        var user3 = new User { Id = 3, Name = "高橋 次郎", Email = "takahashi@example.com", Age = 28, DepartmentId = 2 };
 
-        _users.Add(user1.Id, user1);
-        _emails.Add(user1.Email);
-
-        _users.Add(user2.Id, user2);
-        _emails.Add(user2.Email);
+        _users.Add(user1.Id, user1); _emails.Add(user1.Email);
+        _users.Add(user2.Id, user2); _emails.Add(user2.Email);
+        _users.Add(user3.Id, user3); _emails.Add(user3.Email);
     }
 
-    public List<User> GetAll()
+    public List<UserDetails> GetAllSorted()
     {
-        // 辞書の「値（User）」だけを取り出してListに変換
-        return _users.Values.ToList();
+        // ★ Join と OrderBy/ThenBy による結合・並び替え
+        return _users.Values
+            .Join(
+                _departments,           // 結合対象
+                u => u.DepartmentId,    // Users側のキー
+                d => d.Id,              // Departments側のキー
+                (u, d) => new UserDetails // 結合結果から新しいオブジェクトを生成
+                {
+                    Id = u.Id,
+                    Name = u.Name,
+                    Age = u.Age,
+                    Email = u.Email,
+                    DepartmentName = d.Name // ここで結合成功！
+                }
+            )
+            .OrderByDescending(x => x.Age) // 第一条件：年齢の降順（高い順）
+            .ThenBy(x => x.Name)           // 第二条件：同い年なら名前の昇順
+            .ToList();
     }
 
     public User? GetById(int id)
     {
-        // Dictionaryの機能を使って一瞬で検索（あれば返す、なければnull）
         _users.TryGetValue(id, out var user);
         return user;
     }
 
     public List<User> SearchByName(string keyword)
     {
-        // LINQのWhereを使って名前で絞り込み
         return _users.Values
             .Where(u => u.Name.Contains(keyword, StringComparison.OrdinalIgnoreCase))
             .ToList();
@@ -46,25 +64,21 @@ public class InMemoryUserRepository : IUserRepository
 
     public void Add(User user)
     {
-        // HashSetの機能を使ってメールアドレスの重複をチェック
         if (_emails.Contains(user.Email))
         {
-            // 重複していたら例外（エラー）を投げる
             throw new ArgumentException($"メールアドレス '{user.Email}' は既に登録されています。");
         }
 
-        // LINQのMaxを使って現在の最大IDを取得し、+1する
         int newId = _users.Any() ? _users.Keys.Max() + 1 : 1;
-
         var newUser = new User
         {
             Id = newId,
             Name = user.Name,
             Email = user.Email,
-            Age = user.Age
+            Age = user.Age,
+            DepartmentId = user.DepartmentId // 部署IDを追加
         };
 
-        // DictionaryとHashSetの両方に追加
         _users.Add(newId, newUser);
         _emails.Add(newUser.Email);
     }
@@ -73,7 +87,6 @@ public class InMemoryUserRepository : IUserRepository
     {
         if (_users.TryGetValue(id, out var target))
         {
-            // 削除するときは、DictionaryとHashSetの両方から消す
             _users.Remove(id);
             _emails.Remove(target.Email);
             return true;
@@ -84,25 +97,25 @@ public class InMemoryUserRepository : IUserRepository
     public UserSummary GetSummary()
     {
         var userList = _users.Values.ToList();
+        if (!userList.Any()) return new UserSummary();
 
-        if (!userList.Any())
-        {
-            return new UserSummary();
-        }
+        // ★ GroupBy による年代別集計
+        var ageGroups = userList
+            .GroupBy(u => (u.Age / 10) * 10) // 例: 28→20, 35→30
+            .OrderBy(g => g.Key)             // 年代順に並び替え
+            .ToDictionary(
+                g => $"{g.Key}代",           // Dictionaryのキー ("20代" など)
+                g => g.Count()               // Dictionaryの値 (所属人数)
+            );
 
         return new UserSummary
         {
-            // LINQの集計メソッド
             TotalCount = userList.Count,
             AverageAge = Math.Round(userList.Average(u => u.Age), 1),
             MinAge = userList.Min(u => u.Age),
             MaxAge = userList.Max(u => u.Age),
-
-            // Select でメールのドメイン（@以降）だけを抽出し、重複を除外
-            EmailDomainList = userList
-                .Select(u => u.Email.Split('@').Last())
-                .Distinct()
-                .ToList()
+            EmailDomainList = userList.Select(u => u.Email.Split('@').Last()).Distinct().ToList(),
+            AgeGroupCounts = ageGroups // 年代別辞書をセット
         };
     }
 }
