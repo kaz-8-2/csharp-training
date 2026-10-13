@@ -1,5 +1,5 @@
-﻿using Day4UserConsole.Repositories;
-using Day4UserConsole.Controllers;
+﻿using UserManagementApp.Repositories;
+using UserManagementApp.Controllers;
 
 IUserRepository repository = new InMemoryUserRepository();
 UserController controller = new UserController(repository);

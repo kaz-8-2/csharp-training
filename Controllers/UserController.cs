@@ -1,7 +1,7 @@
-using Day4UserConsole.Repositories;
-using Day4UserConsole.Models;
+using UserManagementApp.Repositories;
+using UserManagementApp.Models;
 
-namespace Day4UserConsole.Controllers;
+namespace UserManagementApp.Controllers;
 
 public class UserController
 {

@@ -1,4 +1,4 @@
-namespace Day4UserConsole.Models;
+namespace UserManagementApp.Models;
 
 public class UserDetails
 {

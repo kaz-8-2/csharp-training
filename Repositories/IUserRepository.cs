@@ -1,6 +1,6 @@
-using Day4UserConsole.Models;
+using UserManagementApp.Models;
 
-namespace Day4UserConsole.Repositories;
+namespace UserManagementApp.Repositories;
 
 public interface IUserRepository
 {
