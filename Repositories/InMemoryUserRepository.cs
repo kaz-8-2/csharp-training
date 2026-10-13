@@ -80,4 +80,29 @@ public class InMemoryUserRepository : IUserRepository
         }
         return false;
     }
+
+    public UserSummary GetSummary()
+    {
+        var userList = _users.Values.ToList();
+
+        if (!userList.Any())
+        {
+            return new UserSummary();
+        }
+
+        return new UserSummary
+        {
+            // LINQの集計メソッド
+            TotalCount = userList.Count,
+            AverageAge = Math.Round(userList.Average(u => u.Age), 1),
+            MinAge = userList.Min(u => u.Age),
+            MaxAge = userList.Max(u => u.Age),
+
+            // Select でメールのドメイン（@以降）だけを抽出し、重複を除外
+            EmailDomainList = userList
+                .Select(u => u.Email.Split('@').Last())
+                .Distinct()
+                .ToList()
+        };
+    }
 }

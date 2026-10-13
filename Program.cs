@@ -11,6 +11,7 @@ while (true)
     Console.WriteLine("2. ユーザー一覧表示");
     Console.WriteLine("3. ユーザー検索 (名前)");
     Console.WriteLine("4. ユーザー削除");
+    Console.WriteLine("5. ユーザー統計情報表示"); // 追加
     Console.WriteLine("9. 終了");
     Console.Write("選択してください > ");
 
@@ -29,6 +30,9 @@ while (true)
             break;
         case "4":
             controller.DeleteUser();
+            break;
+        case "5":
+            controller.ShowSummary();
             break;
         case "9":
             Console.WriteLine("システムを終了します。");

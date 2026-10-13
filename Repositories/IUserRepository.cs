@@ -1,11 +1,13 @@
+using Day4UserConsole.Models;
+
 namespace Day4UserConsole.Repositories;
 
 public interface IUserRepository
 {
-    List<Models.User> GetAll();
-    Models.User? GetById(int id);
-    List<Models.User> SearchByName(string keyword);
-    void Add(Models.User user);
+    List<User> GetAll();
+    User? GetById(int id);
+    List<User> SearchByName(string keyword);
+    void Add(User user);
     bool Delete(int id);
-    
+    UserSummary GetSummary(); // 追加
 }

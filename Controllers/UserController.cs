@@ -7,7 +7,6 @@ public class UserController
 {
     private readonly IUserRepository _repository;
 
-    // DI（コンストラクタ注入）でリポジトリを受け取る
     public UserController(IUserRepository repository)
     {
         _repository = repository;
@@ -39,7 +38,6 @@ public class UserController
             return;
         }
 
-        // ▼▼▼ ここから変更 ▼▼▼
         try
         {
             _repository.Add(new User { Name = name, Email = email, Age = age });
@@ -50,7 +48,6 @@ public class UserController
             // HashSetで重複検知した例外をここでキャッチして表示する
             Console.WriteLine($"エラー: {ex.Message}");
         }
-        // ▲▲▲ ここまで変更 ▲▲▲
     }
 
     public void ShowAllUsers()
@@ -112,5 +109,22 @@ public class UserController
         {
             Console.WriteLine($"エラー: ID: {id} のユーザーは見つかりませんでした。");
         }
+    }
+
+    public void ShowSummary()
+    {
+        Console.WriteLine("\n--- ユーザー統計情報 ---");
+        var summary = _repository.GetSummary();
+
+        if (summary.TotalCount == 0)
+        {
+            Console.WriteLine("登録されているユーザーがいません。");
+            return;
+        }
+
+        Console.WriteLine($"総ユーザー数: {summary.TotalCount}名");
+        Console.WriteLine($"平均年齢    : {summary.AverageAge}歳");
+        Console.WriteLine($"最年少 / 最年長: {summary.MinAge}歳 / {summary.MaxAge}歳");
+        Console.WriteLine($"利用ドメイン一覧: {string.Join(", ", summary.EmailDomainList)}");
     }
 }
