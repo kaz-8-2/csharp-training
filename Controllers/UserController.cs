@@ -12,7 +12,7 @@ public class UserController
         _repository = repository;
     }
 
-    public void RegisterUser()
+    public async Task RegisterUserAsync()
     {
         Console.WriteLine("\n--- ユーザー登録 ---");
         Console.Write("名前を入力: ");
@@ -26,7 +26,6 @@ public class UserController
         Console.Write("年齢を入力: ");
         if (!int.TryParse(Console.ReadLine(), out int age) || age < 0) { Console.WriteLine("エラー: 年齢は0以上の数値を入力してください。"); return; }
 
-        // ★ 部署の入力を追加
         Console.Write("部署を選択 (1:営業部, 2:開発部, 3:総務部): ");
         if (!int.TryParse(Console.ReadLine(), out int deptId) || deptId < 1 || deptId > 3) 
         { 
@@ -35,7 +34,7 @@ public class UserController
 
         try
         {
-            _repository.Add(new User { Name = name, Email = email, Age = age, DepartmentId = deptId });
+            await _repository.AddAsync(new User { Name = name, Email = email, Age = age, DepartmentId = deptId });
             Console.WriteLine("ユーザーを登録しました。");
         }
         catch (ArgumentException ex)
@@ -44,28 +43,27 @@ public class UserController
         }
     }
 
-    public void ShowAllUsers()
+    public async Task ShowAllUsersAsync()
     {
         Console.WriteLine("\n--- ユーザー一覧 (年齢順) ---");
-        var users = _repository.GetAllSorted(); // ★変更箇所
+        var users = await _repository.GetAllSortedAsync();
 
         if (!users.Any()) { Console.WriteLine("登録されているユーザーはいません。"); return; }
 
         foreach (var user in users)
         {
-            // 部署名が追加されている！
             Console.WriteLine($"ID: {user.Id} | 部署: {user.DepartmentName} | 名前: {user.Name} | 年齢: {user.Age} | メール: {user.Email}");
         }
     }
 
-    public void SearchUsers()
+    public async Task SearchUsersAsync()
     {
         Console.WriteLine("\n--- ユーザー検索 ---");
         Console.Write("検索キーワード (名前) を入力: ");
         string? keyword = Console.ReadLine();
         if (string.IsNullOrWhiteSpace(keyword)) { Console.WriteLine("エラー: 検索キーワードを入力してください。"); return; }
 
-        var results = _repository.SearchByName(keyword);
+        var results = await _repository.SearchByNameAsync(keyword);
         if (!results.Any()) { Console.WriteLine("該当するユーザーは見つかりませんでした。"); return; }
 
         foreach (var user in results)
@@ -74,21 +72,21 @@ public class UserController
         }
     }
 
-    public void DeleteUser()
+    public async Task DeleteUserAsync()
     {
         Console.WriteLine("\n--- ユーザー削除 ---");
         Console.Write("削除するユーザーIDを入力: ");
         if (!int.TryParse(Console.ReadLine(), out int id)) { Console.WriteLine("エラー: 有効な数値を入力してください。"); return; }
 
-        bool success = _repository.Delete(id);
+        bool success = await _repository.DeleteAsync(id);
         if (success) Console.WriteLine($"ID: {id} のユーザーを削除しました。");
         else Console.WriteLine($"エラー: ID: {id} のユーザーは見つかりませんでした。");
     }
 
-    public void ShowSummary()
+    public async Task ShowSummaryAsync()
     {
         Console.WriteLine("\n--- ユーザー統計情報 ---");
-        var summary = _repository.GetSummary();
+        var summary = await _repository.GetSummaryAsync();
 
         if (summary.TotalCount == 0) { Console.WriteLine("登録されているユーザーがいません。"); return; }
 
@@ -97,7 +95,6 @@ public class UserController
         Console.WriteLine($"最年少 / 最年長: {summary.MinAge}歳 / {summary.MaxAge}歳");
         Console.WriteLine($"利用ドメイン一覧: {string.Join(", ", summary.EmailDomainList)}");
 
-        // ★ 年代別構成比を表示
         Console.WriteLine("\n【年代別 構成比】");
         foreach (var group in summary.AgeGroupCounts)
         {

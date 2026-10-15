@@ -1,13 +1,12 @@
+using System.Text.Json;
 using UserManagementApp.Models;
 
 namespace UserManagementApp.Repositories;
 
-public class InMemoryUserRepository : IUserRepository
+public class UserRepository : IUserRepository
 {
-    private readonly Dictionary<int, User> _users = new();
-    private readonly HashSet<string> _emails = new();
-    
-    // 部署のマスターデータ
+    private readonly string _filePath = "users.json";
+
     private readonly List<Department> _departments = new()
     {
         new Department { Id = 1, Name = "営業部" },
@@ -15,107 +14,111 @@ public class InMemoryUserRepository : IUserRepository
         new Department { Id = 3, Name = "総務部" }
     };
 
-    public InMemoryUserRepository()
+    private async Task<List<User>> LoadUsersAsync()
     {
-        // 初期データ（テスト用に追加）
-        var user1 = new User { Id = 1, Name = "佐藤 太郎", Email = "sato@example.com", Age = 28, DepartmentId = 1 };
-        var user2 = new User { Id = 2, Name = "鈴木 一郎", Email = "suzuki@example.com", Age = 35, DepartmentId = 2 };
-        var user3 = new User { Id = 3, Name = "高橋 次郎", Email = "takahashi@example.com", Age = 28, DepartmentId = 2 };
+        if (!File.Exists(_filePath)) return new List<User>();
 
-        _users.Add(user1.Id, user1); _emails.Add(user1.Email);
-        _users.Add(user2.Id, user2); _emails.Add(user2.Email);
-        _users.Add(user3.Id, user3); _emails.Add(user3.Email);
+        string json = await File.ReadAllTextAsync(_filePath);
+        if (string.IsNullOrWhiteSpace(json)) return new List<User>();
+
+        return JsonSerializer.Deserialize<List<User>>(json) ?? new List<User>();
     }
 
-    public List<UserDetails> GetAllSorted()
+    private async Task SaveUsersAsync(List<User> users)
     {
-        // ★ Join と OrderBy/ThenBy による結合・並び替え
-        return _users.Values
+        var options = new JsonSerializerOptions { WriteIndented = true };
+        string json = JsonSerializer.Serialize(users, options);
+        await File.WriteAllTextAsync(_filePath, json);
+    }
+
+    public async Task<List<UserDetails>> GetAllSortedAsync()
+    {
+        var users = await LoadUsersAsync();
+        return users
             .Join(
-                _departments,           // 結合対象
-                u => u.DepartmentId,    // Users側のキー
-                d => d.Id,              // Departments側のキー
-                (u, d) => new UserDetails // 結合結果から新しいオブジェクトを生成
+                _departments,
+                u => u.DepartmentId,
+                d => d.Id,
+                (u, d) => new UserDetails
                 {
-                    Id = u.Id,
-                    Name = u.Name,
-                    Age = u.Age,
-                    Email = u.Email,
-                    DepartmentName = d.Name // ここで結合成功！
+                    Id = u.Id, Name = u.Name, Age = u.Age, Email = u.Email, DepartmentName = d.Name
                 }
             )
-            .OrderByDescending(x => x.Age) // 第一条件：年齢の降順（高い順）
-            .ThenBy(x => x.Name)           // 第二条件：同い年なら名前の昇順
+            .OrderByDescending(x => x.Age)
+            .ThenBy(x => x.Name)
             .ToList();
     }
 
-    public User? GetById(int id)
+    public async Task<User?> GetByIdAsync(int id)
     {
-        _users.TryGetValue(id, out var user);
-        return user;
+        var users = await LoadUsersAsync();
+        return users.FirstOrDefault(u => u.Id == id);
     }
 
-    public List<User> SearchByName(string keyword)
+    public async Task<List<User>> SearchByNameAsync(string keyword)
     {
-        return _users.Values
+        var users = await LoadUsersAsync();
+        return users
             .Where(u => u.Name.Contains(keyword, StringComparison.OrdinalIgnoreCase))
             .ToList();
     }
 
-    public void Add(User user)
+    public async Task AddAsync(User user)
     {
-        if (_emails.Contains(user.Email))
+        var users = await LoadUsersAsync();
+
+        if (users.Any(u => u.Email == user.Email))
         {
             throw new ArgumentException($"メールアドレス '{user.Email}' は既に登録されています。");
         }
 
-        int newId = _users.Any() ? _users.Keys.Max() + 1 : 1;
+        int newId = users.Any() ? users.Max(u => u.Id) + 1 : 1;
+
         var newUser = new User
         {
             Id = newId,
             Name = user.Name,
             Email = user.Email,
             Age = user.Age,
-            DepartmentId = user.DepartmentId // 部署IDを追加
+            DepartmentId = user.DepartmentId
         };
 
-        _users.Add(newId, newUser);
-        _emails.Add(newUser.Email);
+        users.Add(newUser);
+        await SaveUsersAsync(users);
     }
 
-    public bool Delete(int id)
+    public async Task<bool> DeleteAsync(int id)
     {
-        if (_users.TryGetValue(id, out var target))
+        var users = await LoadUsersAsync();
+        var target = users.FirstOrDefault(u => u.Id == id);
+        
+        if (target != null)
         {
-            _users.Remove(id);
-            _emails.Remove(target.Email);
+            users.Remove(target);
+            await SaveUsersAsync(users);
             return true;
         }
         return false;
     }
 
-    public UserSummary GetSummary()
+    public async Task<UserSummary> GetSummaryAsync()
     {
-        var userList = _users.Values.ToList();
-        if (!userList.Any()) return new UserSummary();
+        var users = await LoadUsersAsync();
+        if (!users.Any()) return new UserSummary();
 
-        // ★ GroupBy による年代別集計
-        var ageGroups = userList
-            .GroupBy(u => (u.Age / 10) * 10) // 例: 28→20, 35→30
-            .OrderBy(g => g.Key)             // 年代順に並び替え
-            .ToDictionary(
-                g => $"{g.Key}代",           // Dictionaryのキー ("20代" など)
-                g => g.Count()               // Dictionaryの値 (所属人数)
-            );
+        var ageGroups = users
+            .GroupBy(u => (u.Age / 10) * 10)
+            .OrderBy(g => g.Key)
+            .ToDictionary(g => $"{g.Key}代", g => g.Count());
 
         return new UserSummary
         {
-            TotalCount = userList.Count,
-            AverageAge = Math.Round(userList.Average(u => u.Age), 1),
-            MinAge = userList.Min(u => u.Age),
-            MaxAge = userList.Max(u => u.Age),
-            EmailDomainList = userList.Select(u => u.Email.Split('@').Last()).Distinct().ToList(),
-            AgeGroupCounts = ageGroups // 年代別辞書をセット
+            TotalCount = users.Count,
+            AverageAge = Math.Round(users.Average(u => u.Age), 1),
+            MinAge = users.Min(u => u.Age),
+            MaxAge = users.Max(u => u.Age),
+            EmailDomainList = users.Select(u => u.Email.Split('@').Last()).Distinct().ToList(),
+            AgeGroupCounts = ageGroups
         };
     }
 }

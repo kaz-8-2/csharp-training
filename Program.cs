@@ -1,44 +1,46 @@
-﻿using UserManagementApp.Repositories;
-using UserManagementApp.Controllers;
+﻿using UserManagementApp.Controllers;
+using UserManagementApp.Repositories;
 
-IUserRepository repository = new InMemoryUserRepository();
+IUserRepository repository = new UserRepository();
 UserController controller = new UserController(repository);
 
 while (true)
 {
-    Console.WriteLine("\n=== ユーザー管理システム ===");
+    Console.WriteLine("\n=============================");
+    Console.WriteLine("ユーザー管理アプリケーション");
+    Console.WriteLine("=============================");
     Console.WriteLine("1. ユーザー登録");
     Console.WriteLine("2. ユーザー一覧表示");
     Console.WriteLine("3. ユーザー検索 (名前)");
     Console.WriteLine("4. ユーザー削除");
-    Console.WriteLine("5. ユーザー統計情報表示"); // 追加
+    Console.WriteLine("5. ユーザー統計情報表示");
     Console.WriteLine("9. 終了");
-    Console.Write("選択してください > ");
+    Console.Write("メニューを選択してください: ");
+    
+    string? choice = Console.ReadLine();
 
-    string? input = Console.ReadLine();
-
-    switch (input)
+    switch (choice)
     {
         case "1":
-            controller.RegisterUser();
+            await controller.RegisterUserAsync();
             break;
         case "2":
-            controller.ShowAllUsers();
+            await controller.ShowAllUsersAsync();
             break;
         case "3":
-            controller.SearchUsers();
+            await controller.SearchUsersAsync();
             break;
         case "4":
-            controller.DeleteUser();
+            await controller.DeleteUserAsync();
             break;
         case "5":
-            controller.ShowSummary();
+            await controller.ShowSummaryAsync();
             break;
         case "9":
-            Console.WriteLine("システムを終了します。");
+            Console.WriteLine("アプリケーションを終了します。");
             return;
         default:
-            Console.WriteLine("無効な選択です。1〜4、または9を入力してください。");
+            Console.WriteLine("エラー: 無効な選択です。もう一度入力してください。");
             break;
     }
 }

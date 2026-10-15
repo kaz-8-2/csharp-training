@@ -4,10 +4,10 @@ namespace UserManagementApp.Repositories;
 
 public interface IUserRepository
 {
-    List<UserDetails> GetAllSorted();
-    User? GetById(int id);
-    List<User> SearchByName(string keyword);
-    void Add(User user);
-    bool Delete(int id);
-    UserSummary GetSummary(); // 追加
+    Task<List<UserDetails>> GetAllSortedAsync();
+    Task<User?> GetByIdAsync(int id);
+    Task<List<User>> SearchByNameAsync(string keyword);
+    Task AddAsync(User user);
+    Task<bool> DeleteAsync(int id);
+    Task<UserSummary> GetSummaryAsync();
 }
