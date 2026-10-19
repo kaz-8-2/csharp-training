@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Text.Json;
 using UserManagementApp.Models;
 
@@ -14,26 +15,26 @@ public class UserRepository : IUserRepository
         new Department { Id = 3, Name = "総務部" }
     };
 
-    private async Task<List<User>> LoadUsersAsync()
+    private async Task<List<User>> LoadUsersAsync(CancellationToken cancellationToken = default)
     {
         if (!File.Exists(_filePath)) return new List<User>();
 
-        string json = await File.ReadAllTextAsync(_filePath);
+        string json = await File.ReadAllTextAsync(_filePath, cancellationToken);
         if (string.IsNullOrWhiteSpace(json)) return new List<User>();
 
         return JsonSerializer.Deserialize<List<User>>(json) ?? new List<User>();
     }
 
-    private async Task SaveUsersAsync(List<User> users)
+    private async Task SaveUsersAsync(List<User> users, CancellationToken cancellationToken = default)
     {
         var options = new JsonSerializerOptions { WriteIndented = true };
         string json = JsonSerializer.Serialize(users, options);
-        await File.WriteAllTextAsync(_filePath, json);
+        await File.WriteAllTextAsync(_filePath, json, cancellationToken);
     }
 
-    public async Task<List<UserDetails>> GetAllSortedAsync()
+    public async Task<List<UserDetails>> GetAllSortedAsync(CancellationToken cancellationToken = default)
     {
-        var users = await LoadUsersAsync();
+        var users = await LoadUsersAsync(cancellationToken);
         return users
             .Join(
                 _departments,
@@ -49,23 +50,23 @@ public class UserRepository : IUserRepository
             .ToList();
     }
 
-    public async Task<User?> GetByIdAsync(int id)
+    public async Task<User?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        var users = await LoadUsersAsync();
+        var users = await LoadUsersAsync(cancellationToken);
         return users.FirstOrDefault(u => u.Id == id);
     }
 
-    public async Task<List<User>> SearchByNameAsync(string keyword)
+    public async Task<List<User>> SearchByNameAsync(string keyword, CancellationToken cancellationToken = default)
     {
-        var users = await LoadUsersAsync();
+        var users = await LoadUsersAsync(cancellationToken);
         return users
             .Where(u => u.Name.Contains(keyword, StringComparison.OrdinalIgnoreCase))
             .ToList();
     }
 
-    public async Task AddAsync(User user)
+    public async Task AddAsync(User user, CancellationToken cancellationToken = default)
     {
-        var users = await LoadUsersAsync();
+        var users = await LoadUsersAsync(cancellationToken);
 
         if (users.Any(u => u.Email == user.Email))
         {
@@ -84,26 +85,26 @@ public class UserRepository : IUserRepository
         };
 
         users.Add(newUser);
-        await SaveUsersAsync(users);
+        await SaveUsersAsync(users, cancellationToken);
     }
 
-    public async Task<bool> DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
-        var users = await LoadUsersAsync();
+        var users = await LoadUsersAsync(cancellationToken);
         var target = users.FirstOrDefault(u => u.Id == id);
         
         if (target != null)
         {
             users.Remove(target);
-            await SaveUsersAsync(users);
+            await SaveUsersAsync(users, cancellationToken);
             return true;
         }
         return false;
     }
 
-    public async Task<UserSummary> GetSummaryAsync()
+    public async Task<UserSummary> GetSummaryAsync(CancellationToken cancellationToken = default)
     {
-        var users = await LoadUsersAsync();
+        var users = await LoadUsersAsync(cancellationToken);
         if (!users.Any()) return new UserSummary();
 
         var ageGroups = users

@@ -1,5 +1,6 @@
 using UserManagementApp.Repositories;
 using UserManagementApp.Models;
+using System.Linq.Expressions;
 
 namespace UserManagementApp.Controllers;
 
@@ -41,18 +42,28 @@ public class UserController
         {
             Console.WriteLine($"エラー: {ex.Message}");
         }
+        catch (OperationCanceledException)
+        {
+            Console.WriteLine("案内: 登録処理がタイムアウトまたはキャンセルされました。");
+        }
     }
 
     public async Task ShowAllUsersAsync()
     {
         Console.WriteLine("\n--- ユーザー一覧 (年齢順) ---");
-        var users = await _repository.GetAllSortedAsync();
-
-        if (!users.Any()) { Console.WriteLine("登録されているユーザーはいません。"); return; }
-
-        foreach (var user in users)
+        try
         {
-            Console.WriteLine($"ID: {user.Id} | 部署: {user.DepartmentName} | 名前: {user.Name} | 年齢: {user.Age} | メール: {user.Email}");
+            var users = await _repository.GetAllSortedAsync();
+
+            if (!users.Any()) { Console.WriteLine("登録されているユーザーはいません。"); return; }
+
+            foreach (var user in users)
+            {
+                Console.WriteLine($"ID: {user.Id} | 部署: {user.DepartmentName} | 名前: {user.Name} | 年齢: {user.Age} | メール: {user.Email}");
+            }
+        }
+        catch (OperationCanceledException){
+            Console.WriteLine("案内: 取得処理がタイムアウトまたはキャンセルされました。");
         }
     }
 
@@ -63,12 +74,18 @@ public class UserController
         string? keyword = Console.ReadLine();
         if (string.IsNullOrWhiteSpace(keyword)) { Console.WriteLine("エラー: 検索キーワードを入力してください。"); return; }
 
-        var results = await _repository.SearchByNameAsync(keyword);
-        if (!results.Any()) { Console.WriteLine("該当するユーザーは見つかりませんでした。"); return; }
+        try{
+            var results = await _repository.SearchByNameAsync(keyword);
+            if (!results.Any()) { Console.WriteLine("該当するユーザーは見つかりませんでした。"); return; }
 
-        foreach (var user in results)
+            foreach (var user in results)
+            {
+                Console.WriteLine($"ID: {user.Id} | 名前: {user.Name} | 年齢: {user.Age} | メール: {user.Email}");
+            }
+        }
+        catch(OperationCanceledException)
         {
-            Console.WriteLine($"ID: {user.Id} | 名前: {user.Name} | 年齢: {user.Age} | メール: {user.Email}");
+            Console.WriteLine("案内: 検索処理がタイムアウトまたはキャンセルされました。");
         }
     }
 
@@ -78,9 +95,15 @@ public class UserController
         Console.Write("削除するユーザーIDを入力: ");
         if (!int.TryParse(Console.ReadLine(), out int id)) { Console.WriteLine("エラー: 有効な数値を入力してください。"); return; }
 
-        bool success = await _repository.DeleteAsync(id);
-        if (success) Console.WriteLine($"ID: {id} のユーザーを削除しました。");
-        else Console.WriteLine($"エラー: ID: {id} のユーザーは見つかりませんでした。");
+        try{
+            bool success = await _repository.DeleteAsync(id);
+            if (success) Console.WriteLine($"ID: {id} のユーザーを削除しました。");
+            else Console.WriteLine($"エラー: ID: {id} のユーザーは見つかりませんでした。");
+        }
+        catch(OperationCanceledException)
+        {
+            Console.WriteLine("案内: 削除処理がタイムアウトまたはキャンセルされました。");
+        }
     }
 
     public async Task ShowSummaryAsync()
@@ -90,15 +113,22 @@ public class UserController
 
         if (summary.TotalCount == 0) { Console.WriteLine("登録されているユーザーがいません。"); return; }
 
-        Console.WriteLine($"総ユーザー数: {summary.TotalCount}名");
-        Console.WriteLine($"平均年齢    : {summary.AverageAge}歳");
-        Console.WriteLine($"最年少 / 最年長: {summary.MinAge}歳 / {summary.MaxAge}歳");
-        Console.WriteLine($"利用ドメイン一覧: {string.Join(", ", summary.EmailDomainList)}");
-
-        Console.WriteLine("\n【年代別 構成比】");
-        foreach (var group in summary.AgeGroupCounts)
+        try
         {
-            Console.WriteLine($" - {group.Key}: {group.Value}名");
+            Console.WriteLine($"総ユーザー数: {summary.TotalCount}名");
+            Console.WriteLine($"平均年齢    : {summary.AverageAge}歳");
+            Console.WriteLine($"最年少 / 最年長: {summary.MinAge}歳 / {summary.MaxAge}歳");
+            Console.WriteLine($"利用ドメイン一覧: {string.Join(", ", summary.EmailDomainList)}");
+
+            Console.WriteLine("\n【年代別 構成比】");
+            foreach (var group in summary.AgeGroupCounts)
+            {
+                Console.WriteLine($" - {group.Key}: {group.Value}名");
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            Console.WriteLine("案内: 集計処理がタイムアウトまたはキャンセルされました。");
         }
     }
 }

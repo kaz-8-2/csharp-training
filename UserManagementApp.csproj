@@ -5,6 +5,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- ▼ この1行を追加（子フォルダのTestsをビルド対象から除外） -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);UserManagementApp.Tests/**</DefaultItemExcludes>
   </PropertyGroup>
 
 </Project>
